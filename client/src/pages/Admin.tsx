@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 
-type Tab = "dashboard" | "plans" | "accounts" | "promos" | "transactions" | "apikeys" | "customers" | "emailblast" | "campaigns" | "logs" | "settings" | "support" | "subadmins" | "geo-restrict" | "vps" | "domains";
+type Tab = "dashboard" | "plans" | "accounts" | "promos" | "transactions" | "apikeys" | "customers" | "ratings" | "feature-requests" | "emailblast" | "campaigns" | "logs" | "settings" | "support" | "subadmins" | "geo-restrict" | "vps" | "domains" | "funnel" | "groups";
 
 class SettingsErrorBoundary extends Component<{ children: React.ReactNode }, { error: string | null }> {
   constructor(props: any) { super(props); this.state = { error: null }; }
@@ -141,6 +141,10 @@ export default function Admin() {
     { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
     { id: "apikeys", label: "API Keys", icon: Key },
     { id: "customers", label: "Customers", icon: Users },
+    { id: "groups", label: "Customer Groups", icon: Tags },
+    { id: "funnel", label: "Conversion Funnel", icon: TrendingUp },
+    { id: "ratings", label: "Ratings", icon: Star },
+    { id: "feature-requests", label: "Feature Requests", icon: Sparkles },
     { id: "emailblast", label: "Email Blast", icon: Send },
     { id: "campaigns", label: "Campaigns", icon: Send },
     { id: "support", label: "Support", icon: MessageCircle },
@@ -243,6 +247,10 @@ export default function Admin() {
           {activeTab === "transactions" && <TransactionsTab />}
           {activeTab === "apikeys" && <ApiKeysTab />}
           {activeTab === "customers" && <CustomersTab />}
+          {activeTab === "groups" && <CustomerGroupsTab />}
+          {activeTab === "funnel" && <ConversionFunnelTab />}
+          {activeTab === "ratings" && <RatingsTab />}
+          {activeTab === "feature-requests" && <FeatureRequestsAdminTab />}
           {activeTab === "emailblast" && <EmailBlastTab />}
           {activeTab === "campaigns" && <CampaignsTab />}
           {activeTab === "support" && <SupportTab />}
@@ -268,12 +276,17 @@ export default function Admin() {
 type BotMessage = { role: "user" | "bot"; content: string; ts: number; isAuto?: boolean };
 
 const QUICK_CMDS = [
-  { label: "📊 Today's stats", cmd: "stats" },
-  { label: "📦 Stock levels", cmd: "stock" },
-  { label: "⏳ Pending orders", cmd: "pending orders" },
-  { label: "👥 Recent customers", cmd: "customers" },
-  { label: "⚠️ Expiring accounts", cmd: "expiring 7 days" },
-  { label: "🏷️ Promo codes", cmd: "promo codes" },
+  { label: "📊 Stats", cmd: "stats" },
+  { label: "📦 Orders", cmd: "orders" },
+  { label: "⏳ Pending", cmd: "pending orders" },
+  { label: "👥 Customers", cmd: "customers" },
+  { label: "🗄️ Stock", cmd: "stock" },
+  { label: "⚠️ Expiring", cmd: "expiring 7 days" },
+  { label: "💹 Revenue", cmd: "revenue breakdown" },
+  { label: "🏷️ Promos", cmd: "promo codes" },
+  { label: "💰 Top-up", cmd: "topup customer@email.com 30" },
+  { label: "🎁 Mass top-up", cmd: "topup all 10" },
+  { label: "❓ Help", cmd: "help" },
 ];
 
 function renderBotText(text: string) {
@@ -464,13 +477,13 @@ function AdminMonitorBot() {
     <>
       {/* Floating button */}
       <button onClick={() => setOpen(o => !o)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl shadow-black/60 flex items-center justify-center transition-all hover:scale-105 active:scale-95 relative"
+        className="fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full shadow-2xl shadow-black/60 flex items-center justify-center transition-all hover:scale-105 active:scale-95 relative"
         style={{ background: botRunning ? "linear-gradient(135deg,#059669,#4f46e5)" : "linear-gradient(135deg,#374151,#1f2937)" }}
         title={botRunning ? "Admin Bot — Running" : "Admin Bot — Stopped"}>
         {open ? <Minimize2 className="w-5 h-5 text-white" /> : <Bot className="w-6 h-6 text-white" />}
-        <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0b0b18] ${botRunning ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
+        <span className={`absolute -bottom-0.5 -left-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0b0b18] ${botRunning ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
         {!open && badgeCount > 0 && botRunning && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center z-10">
+          <span className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center z-10">
             {badgeCount}
           </span>
         )}
@@ -478,7 +491,7 @@ function AdminMonitorBot() {
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-[400px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-[#0b0b18] shadow-2xl shadow-black/80 flex flex-col overflow-hidden"
+        <div className="fixed bottom-24 left-6 z-50 w-[400px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-[#0b0b18] shadow-2xl shadow-black/80 flex flex-col overflow-hidden"
           style={{ height: "580px" }}>
 
           {/* Header */}
@@ -584,16 +597,9 @@ function AdminMonitorBot() {
               )}
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {chatMsgs.length === 0 && (
-                  <div>
-                    <p className="text-[10px] text-white/20 mb-2 text-center">Quick commands</p>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {QUICK_CMDS.map(q => (
-                        <button key={q.cmd} onClick={() => send(q.cmd)}
-                          className="text-left text-[11px] text-indigo-300 bg-indigo-600/10 hover:bg-indigo-600/25 border border-indigo-500/20 rounded-lg px-2.5 py-1.5 transition-colors">
-                          {q.label}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="flex flex-col items-center justify-center h-full gap-2 pb-4">
+                    <Bot className="w-8 h-8 text-indigo-500/30" />
+                    <p className="text-[11px] text-white/20 text-center">Tap a command below or type your query</p>
                   </div>
                 )}
                 {chatMsgs.map((m, i) => (
@@ -620,10 +626,21 @@ function AdminMonitorBot() {
                 )}
                 <div ref={messagesEndRef} />
               </div>
-              <div className="px-3 pb-3 pt-2 border-t border-white/6 flex-shrink-0">
+              {/* Scrollable quick-command chips — always visible */}
+              <div className="px-3 pt-2 pb-1 border-t border-white/6 flex-shrink-0">
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
+                  {QUICK_CMDS.map(q => (
+                    <button key={q.cmd} onClick={() => send(q.cmd)} disabled={loading}
+                      className="flex-shrink-0 text-[10px] font-medium text-indigo-300 bg-indigo-600/12 hover:bg-indigo-600/30 border border-indigo-500/25 rounded-full px-2.5 py-1 transition-colors whitespace-nowrap disabled:opacity-40">
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="px-3 pb-3 pt-1 flex-shrink-0">
                 <form onSubmit={e => { e.preventDefault(); send(input); }} className="flex gap-2">
                   <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
-                    placeholder="stats · orders · stock · expiring…" disabled={loading}
+                    placeholder="Type a command or question…" disabled={loading}
                     className="flex-1 bg-white/6 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-indigo-500/50 transition-colors" />
                   <button type="submit" disabled={loading || !input.trim()}
                     className="w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 flex items-center justify-center transition-colors self-center flex-shrink-0">
@@ -2297,6 +2314,25 @@ function AccountsTab() {
                                 )}
                               </div>
                               <p className="text-xs text-white/30 mt-0.5">Added {new Date(acc.addedAt).toLocaleDateString()} · {acc.usedBy?.length ?? 0} assigned</p>
+                              {acc.usedBy && acc.usedBy.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {acc.usedBy.map((u: any, ui: number) => {
+                                    const expDate = u.expiresAt ? new Date(u.expiresAt) : null;
+                                    const isExpired = expDate && expDate < new Date();
+                                    const expSoon = expDate && !isExpired && expDate < new Date(Date.now() + 3*86400000);
+                                    return (
+                                      <div key={ui} className="flex items-center gap-2 text-[11px]">
+                                        <span className="text-white/50 truncate max-w-[160px]">{u.customerEmail}</span>
+                                        {expDate ? (
+                                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${isExpired ? "bg-red-500/20 text-red-400" : expSoon ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-white/30"}`}>
+                                            {isExpired ? "Expired" : "Expires"} {expDate.toLocaleDateString()}
+                                          </span>
+                                        ) : <span className="text-white/20">No expiry</span>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <Button size="sm" variant="outline" className="glass border-white/10 text-white/60 hover:text-white h-8"
@@ -2969,6 +3005,28 @@ function ApiKeysTab() {
               </div>
               <p className="text-xs text-white/35">Get the linked customer's orders</p>
             </div>
+            <p className="text-xs font-bold text-violet-400 uppercase tracking-wider mt-4">Public Reseller Endpoints</p>
+            <p className="text-xs text-white/30 mb-2">Use <code className="bg-black/30 px-1 rounded">X-Reseller-Key</code> header with an admin key that has reseller scope</p>
+            <div className="rounded-lg p-3 bg-white/5 border border-white/8">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded">GET</span>
+                <code className="text-xs text-white/70 font-mono">/api/v1/plans</code>
+              </div>
+              <p className="text-xs text-white/35 mb-2">List all available plans with prices (public reseller catalogue)</p>
+              <code className="text-[10px] text-white/30 bg-black/30 rounded px-2 py-1 block break-all">
+                curl -H "X-API-Key: YOUR_KEY" {window.location.origin}/api/v1/plans
+              </code>
+            </div>
+            <div className="rounded-lg p-3 bg-white/5 border border-white/8">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold text-orange-400 bg-orange-500/15 px-2 py-0.5 rounded">POST</span>
+                <code className="text-xs text-white/70 font-mono">/api/v1/orders</code>
+              </div>
+              <p className="text-xs text-white/35 mb-2">Create a reseller order — delivers account credentials instantly if in stock</p>
+              <code className="text-[10px] text-white/30 bg-black/30 rounded px-2 py-1 block break-all">
+                {`curl -X POST -H "X-API-Key: KEY" -H "Content-Type: application/json" -d '{"planId":"PLAN_ID","customerEmail":"customer@email.com","customerName":"John"}' ${window.location.origin}/api/v1/orders`}
+              </code>
+            </div>
           </div>
         </div>
       )}
@@ -3490,6 +3548,20 @@ function CustomersTab() {
   const [walletTopupId, setWalletTopupId] = useState<number | null>(null);
   const [walletAmount, setWalletAmount] = useState("");
   const [walletNote, setWalletNote] = useState("");
+  const [profileId, setProfileId] = useState<number | null>(null);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  async function openProfile(id: number) {
+    setProfileId(id);
+    setProfileData(null);
+    setProfileLoading(true);
+    try {
+      const d = await authFetch(`/api/admin/customers/${id}/profile`);
+      if (d.success) setProfileData(d);
+    } catch {}
+    finally { setProfileLoading(false); }
+  }
 
   async function loadLoginHistory(id: number) {
     if (expandedId === id) { setExpandedId(null); return; }
@@ -3684,6 +3756,15 @@ function CustomersTab() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {/* View Profile button */}
+                      <button
+                        onClick={() => openProfile(c.id)}
+                        title="View full profile"
+                        className="p-1.5 rounded-lg transition-all text-xs font-medium px-2.5 py-1 flex items-center gap-1 text-white/30 hover:text-violet-400 hover:bg-violet-500/10"
+                      >
+                        <UserCircle className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Profile</span>
+                      </button>
                       {/* Login history button */}
                       <button
                         onClick={() => loadLoginHistory(c.id)}
@@ -3881,6 +3962,138 @@ function CustomersTab() {
         className="hidden"
         onChange={handleAdminAvatarUpload}
       />
+
+      {/* ── Customer Profile Modal ── */}
+      {profileId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,.75)", backdropFilter: "blur(10px)" }}>
+          <div className="w-full max-w-2xl rounded-2xl border border-white/15 flex flex-col overflow-hidden shadow-2xl"
+            style={{ background: "linear-gradient(135deg,rgba(11,16,32,.98),rgba(20,12,40,.98))", maxHeight: "90vh" }}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/8 shrink-0">
+              <div className="flex items-center gap-3">
+                {profileData?.customer?.avatarUrl ? (
+                  <img src={profileData.customer.avatarUrl} className="w-10 h-10 rounded-full object-cover border border-white/15" alt="" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-indigo-600/30 flex items-center justify-center">
+                    <span className="text-indigo-300 font-bold text-base">{(profileData?.customer?.email || "?")[0].toUpperCase()}</span>
+                  </div>
+                )}
+                <div>
+                  <p className="text-white font-bold">{profileData?.customer?.name || profileData?.customer?.email || "Loading…"}</p>
+                  <p className="text-white/40 text-xs font-mono">{profileData?.customer?.email}</p>
+                </div>
+              </div>
+              <button onClick={() => { setProfileId(null); setProfileData(null); }} className="text-white/30 hover:text-white/70 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-6 space-y-5">
+              {profileLoading ? (
+                <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 text-indigo-400 animate-spin" /></div>
+              ) : profileData ? (
+                <>
+                  {/* Status badges + wallet */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-xl p-3 border border-white/8 text-center" style={{ background: "rgba(255,255,255,.04)" }}>
+                      <p className="text-white/40 text-[11px] mb-1">Wallet</p>
+                      <p className="text-emerald-400 font-bold text-lg">KES {(profileData.wallet?.balance ?? 0).toLocaleString()}</p>
+                    </div>
+                    <div className="rounded-xl p-3 border border-white/8 text-center" style={{ background: "rgba(255,255,255,.04)" }}>
+                      <p className="text-white/40 text-[11px] mb-1">Orders</p>
+                      <p className="text-white font-bold text-lg">{profileData.orders?.length ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl p-3 border border-white/8 text-center" style={{ background: "rgba(255,255,255,.04)" }}>
+                      <p className="text-white/40 text-[11px] mb-1">Referrals</p>
+                      <p className="text-white font-bold text-lg">{profileData.referral?.completedReferrals ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl p-3 border border-white/8 text-center" style={{ background: "rgba(255,255,255,.04)" }}>
+                      <p className="text-white/40 text-[11px] mb-1">Referral Earned</p>
+                      <p className="text-amber-400 font-bold text-lg">KES {(profileData.referral?.totalEarned ?? 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Account info */}
+                  <div className="rounded-xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,.03)" }}>
+                    <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-3">Account Info</p>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                      {[
+                        ["Email Verified", profileData.customer.emailVerified ? "✅ Yes" : "❌ No"],
+                        ["2FA Enabled", profileData.customer.totpEnabled ? "🔐 On" : "Off"],
+                        ["Status", profileData.customer.suspended ? "🔴 Suspended" : "🟢 Active"],
+                        ["Member Since", profileData.customer.createdAt ? new Date(profileData.customer.createdAt).toLocaleDateString() : "—"],
+                      ].map(([label, value]) => (
+                        <div key={label} className="flex items-center justify-between py-1 border-b border-white/5">
+                          <span className="text-white/40 text-xs">{label}</span>
+                          <span className="text-white/80 text-xs font-medium">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recent orders */}
+                  {(profileData.orders?.length ?? 0) > 0 && (
+                    <div className="rounded-xl border border-white/8 overflow-hidden" style={{ background: "rgba(255,255,255,.03)" }}>
+                      <p className="text-white/40 text-xs font-semibold uppercase tracking-widest px-4 pt-3 pb-2">Recent Orders</p>
+                      <table className="w-full text-xs">
+                        <tbody>
+                          {profileData.orders.slice(0, 8).map((o: any) => (
+                            <tr key={o.reference || o.id} className="border-t border-white/5">
+                              <td className="px-4 py-2 text-white/70">{o.planName || "—"}</td>
+                              <td className="px-4 py-2 text-right text-indigo-300 font-mono">KES {(o.amount ?? 0).toLocaleString()}</td>
+                              <td className="px-4 py-2 text-right">
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${o.status === "success" ? "bg-emerald-500/20 text-emerald-400" : o.status === "failed" ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>
+                                  {o.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-right text-white/30">{o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Ratings given */}
+                  {(profileData.ratings?.length ?? 0) > 0 && (
+                    <div className="rounded-xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,.03)" }}>
+                      <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-3">Ratings Given</p>
+                      <div className="space-y-2">
+                        {profileData.ratings.map((r: any) => (
+                          <div key={r.id} className="flex items-center gap-3">
+                            <div className="flex items-center gap-0.5">
+                              {[1,2,3,4,5].map(s => <Star key={s} className={`w-3.5 h-3.5 ${s <= r.stars ? "text-amber-400 fill-amber-400" : "text-white/15"}`} />)}
+                            </div>
+                            <span className="text-white/60 text-xs">{r.planName || "—"}</span>
+                            {r.comment && <span className="text-white/35 text-xs italic truncate max-w-[200px]">"{r.comment}"</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent logins */}
+                  {(profileData.loginHistory?.length ?? 0) > 0 && (
+                    <div className="rounded-xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,.03)" }}>
+                      <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-3">Recent Logins</p>
+                      <div className="space-y-1.5">
+                        {profileData.loginHistory.slice(0, 5).map((log: any, i: number) => (
+                          <div key={i} className="flex items-center gap-3 text-xs">
+                            <span className="font-mono text-white/40">{log.ip || "—"}</span>
+                            <span className="text-white/30 text-[11px]">{log.created_at ? new Date(log.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-white/30 text-center py-8">Failed to load profile</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -4723,30 +4936,103 @@ function GlassStatCard({ title, value, icon: Icon, gradient, glow }: { title: st
 
 // ─── Country / GEO RESTRICT TAB ──────────────────────────────────────────
 const COUNTRY_LIST = [
-  { code: "US", name: "United States" }, { code: "GB", name: "United Kingdom" },
-  { code: "CA", name: "Canada" }, { code: "AU", name: "Australia" },
-  { code: "DE", name: "Germany" }, { code: "FR", name: "France" },
-  { code: "IT", name: "Italy" }, { code: "ES", name: "Spain" },
-  { code: "NL", name: "Netherlands" }, { code: "SE", name: "Sweden" },
-  { code: "NO", name: "Norway" }, { code: "CH", name: "Switzerland" },
-  { code: "IN", name: "India" }, { code: "CN", name: "China" },
-  { code: "JP", name: "Japan" }, { code: "KR", name: "South Korea" },
-  { code: "SG", name: "Singapore" }, { code: "AE", name: "UAE" },
-  { code: "SA", name: "Saudi Arabia" }, { code: "ZA", name: "South Africa" },
-  { code: "KE", name: "Kenya" }, { code: "NG", name: "Nigeria" },
-  { code: "GH", name: "Ghana" }, { code: "TZ", name: "Tanzania" },
-  { code: "UG", name: "Uganda" }, { code: "ET", name: "Ethiopia" },
-  { code: "RW", name: "Rwanda" }, { code: "EG", name: "Egypt" },
-  { code: "MA", name: "Morocco" }, { code: "TN", name: "Tunisia" },
-  { code: "BR", name: "Brazil" }, { code: "MX", name: "Mexico" },
-  { code: "AR", name: "Argentina" }, { code: "CL", name: "Chile" },
-  { code: "RU", name: "Russia" }, { code: "UA", name: "Ukraine" },
-  { code: "PL", name: "Poland" }, { code: "TR", name: "Turkey" },
-  { code: "IR", name: "Iran" }, { code: "IQ", name: "Iraq" },
-  { code: "PK", name: "Pakistan" }, { code: "BD", name: "Bangladesh" },
-  { code: "ID", name: "Indonesia" }, { code: "PH", name: "Philippines" },
-  { code: "VN", name: "Vietnam" }, { code: "TH", name: "Thailand" },
-  { code: "MY", name: "Malaysia" }, { code: "MM", name: "Myanmar" },
+  { code: "AF", name: "Afghanistan" }, { code: "AL", name: "Albania" },
+  { code: "DZ", name: "Algeria" }, { code: "AD", name: "Andorra" },
+  { code: "AO", name: "Angola" }, { code: "AG", name: "Antigua and Barbuda" },
+  { code: "AR", name: "Argentina" }, { code: "AM", name: "Armenia" },
+  { code: "AU", name: "Australia" }, { code: "AT", name: "Austria" },
+  { code: "AZ", name: "Azerbaijan" }, { code: "BS", name: "Bahamas" },
+  { code: "BH", name: "Bahrain" }, { code: "BD", name: "Bangladesh" },
+  { code: "BB", name: "Barbados" }, { code: "BY", name: "Belarus" },
+  { code: "BE", name: "Belgium" }, { code: "BZ", name: "Belize" },
+  { code: "BJ", name: "Benin" }, { code: "BT", name: "Bhutan" },
+  { code: "BO", name: "Bolivia" }, { code: "BA", name: "Bosnia and Herzegovina" },
+  { code: "BW", name: "Botswana" }, { code: "BR", name: "Brazil" },
+  { code: "BN", name: "Brunei" }, { code: "BG", name: "Bulgaria" },
+  { code: "BF", name: "Burkina Faso" }, { code: "BI", name: "Burundi" },
+  { code: "CV", name: "Cabo Verde" }, { code: "KH", name: "Cambodia" },
+  { code: "CM", name: "Cameroon" }, { code: "CA", name: "Canada" },
+  { code: "CF", name: "Central African Republic" }, { code: "TD", name: "Chad" },
+  { code: "CL", name: "Chile" }, { code: "CN", name: "China" },
+  { code: "CO", name: "Colombia" }, { code: "KM", name: "Comoros" },
+  { code: "CD", name: "Congo (DRC)" }, { code: "CG", name: "Congo (Republic)" },
+  { code: "CR", name: "Costa Rica" }, { code: "HR", name: "Croatia" },
+  { code: "CU", name: "Cuba" }, { code: "CY", name: "Cyprus" },
+  { code: "CZ", name: "Czech Republic" }, { code: "DK", name: "Denmark" },
+  { code: "DJ", name: "Djibouti" }, { code: "DM", name: "Dominica" },
+  { code: "DO", name: "Dominican Republic" }, { code: "EC", name: "Ecuador" },
+  { code: "EG", name: "Egypt" }, { code: "SV", name: "El Salvador" },
+  { code: "GQ", name: "Equatorial Guinea" }, { code: "ER", name: "Eritrea" },
+  { code: "EE", name: "Estonia" }, { code: "SZ", name: "Eswatini" },
+  { code: "ET", name: "Ethiopia" }, { code: "FJ", name: "Fiji" },
+  { code: "FI", name: "Finland" }, { code: "FR", name: "France" },
+  { code: "GA", name: "Gabon" }, { code: "GM", name: "Gambia" },
+  { code: "GE", name: "Georgia" }, { code: "DE", name: "Germany" },
+  { code: "GH", name: "Ghana" }, { code: "GR", name: "Greece" },
+  { code: "GD", name: "Grenada" }, { code: "GT", name: "Guatemala" },
+  { code: "GN", name: "Guinea" }, { code: "GW", name: "Guinea-Bissau" },
+  { code: "GY", name: "Guyana" }, { code: "HT", name: "Haiti" },
+  { code: "HN", name: "Honduras" }, { code: "HU", name: "Hungary" },
+  { code: "IS", name: "Iceland" }, { code: "IN", name: "India" },
+  { code: "ID", name: "Indonesia" }, { code: "IR", name: "Iran" },
+  { code: "IQ", name: "Iraq" }, { code: "IE", name: "Ireland" },
+  { code: "IL", name: "Israel" }, { code: "IT", name: "Italy" },
+  { code: "JM", name: "Jamaica" }, { code: "JP", name: "Japan" },
+  { code: "JO", name: "Jordan" }, { code: "KZ", name: "Kazakhstan" },
+  { code: "KE", name: "Kenya" }, { code: "KI", name: "Kiribati" },
+  { code: "KW", name: "Kuwait" }, { code: "KG", name: "Kyrgyzstan" },
+  { code: "LA", name: "Laos" }, { code: "LV", name: "Latvia" },
+  { code: "LB", name: "Lebanon" }, { code: "LS", name: "Lesotho" },
+  { code: "LR", name: "Liberia" }, { code: "LY", name: "Libya" },
+  { code: "LI", name: "Liechtenstein" }, { code: "LT", name: "Lithuania" },
+  { code: "LU", name: "Luxembourg" }, { code: "MG", name: "Madagascar" },
+  { code: "MW", name: "Malawi" }, { code: "MY", name: "Malaysia" },
+  { code: "MV", name: "Maldives" }, { code: "ML", name: "Mali" },
+  { code: "MT", name: "Malta" }, { code: "MH", name: "Marshall Islands" },
+  { code: "MR", name: "Mauritania" }, { code: "MU", name: "Mauritius" },
+  { code: "MX", name: "Mexico" }, { code: "FM", name: "Micronesia" },
+  { code: "MD", name: "Moldova" }, { code: "MC", name: "Monaco" },
+  { code: "MN", name: "Mongolia" }, { code: "ME", name: "Montenegro" },
+  { code: "MA", name: "Morocco" }, { code: "MZ", name: "Mozambique" },
+  { code: "MM", name: "Myanmar" }, { code: "NA", name: "Namibia" },
+  { code: "NR", name: "Nauru" }, { code: "NP", name: "Nepal" },
+  { code: "NL", name: "Netherlands" }, { code: "NZ", name: "New Zealand" },
+  { code: "NI", name: "Nicaragua" }, { code: "NE", name: "Niger" },
+  { code: "NG", name: "Nigeria" }, { code: "KP", name: "North Korea" },
+  { code: "MK", name: "North Macedonia" }, { code: "NO", name: "Norway" },
+  { code: "OM", name: "Oman" }, { code: "PK", name: "Pakistan" },
+  { code: "PW", name: "Palau" }, { code: "PA", name: "Panama" },
+  { code: "PG", name: "Papua New Guinea" }, { code: "PY", name: "Paraguay" },
+  { code: "PE", name: "Peru" }, { code: "PH", name: "Philippines" },
+  { code: "PL", name: "Poland" }, { code: "PT", name: "Portugal" },
+  { code: "QA", name: "Qatar" }, { code: "RO", name: "Romania" },
+  { code: "RU", name: "Russia" }, { code: "RW", name: "Rwanda" },
+  { code: "KN", name: "Saint Kitts and Nevis" }, { code: "LC", name: "Saint Lucia" },
+  { code: "VC", name: "Saint Vincent and the Grenadines" }, { code: "WS", name: "Samoa" },
+  { code: "SM", name: "San Marino" }, { code: "ST", name: "Sao Tome and Principe" },
+  { code: "SA", name: "Saudi Arabia" }, { code: "SN", name: "Senegal" },
+  { code: "RS", name: "Serbia" }, { code: "SC", name: "Seychelles" },
+  { code: "SL", name: "Sierra Leone" }, { code: "SG", name: "Singapore" },
+  { code: "SK", name: "Slovakia" }, { code: "SI", name: "Slovenia" },
+  { code: "SB", name: "Solomon Islands" }, { code: "SO", name: "Somalia" },
+  { code: "ZA", name: "South Africa" }, { code: "SS", name: "South Sudan" },
+  { code: "KR", name: "South Korea" }, { code: "ES", name: "Spain" },
+  { code: "LK", name: "Sri Lanka" }, { code: "SD", name: "Sudan" },
+  { code: "SR", name: "Suriname" }, { code: "SE", name: "Sweden" },
+  { code: "CH", name: "Switzerland" }, { code: "SY", name: "Syria" },
+  { code: "TW", name: "Taiwan" }, { code: "TJ", name: "Tajikistan" },
+  { code: "TZ", name: "Tanzania" }, { code: "TH", name: "Thailand" },
+  { code: "TL", name: "Timor-Leste" }, { code: "TG", name: "Togo" },
+  { code: "TO", name: "Tonga" }, { code: "TT", name: "Trinidad and Tobago" },
+  { code: "TN", name: "Tunisia" }, { code: "TR", name: "Turkey" },
+  { code: "TM", name: "Turkmenistan" }, { code: "TV", name: "Tuvalu" },
+  { code: "UG", name: "Uganda" }, { code: "UA", name: "Ukraine" },
+  { code: "AE", name: "United Arab Emirates" }, { code: "GB", name: "United Kingdom" },
+  { code: "US", name: "United States" }, { code: "UY", name: "Uruguay" },
+  { code: "UZ", name: "Uzbekistan" }, { code: "VU", name: "Vanuatu" },
+  { code: "VE", name: "Venezuela" }, { code: "VN", name: "Vietnam" },
+  { code: "YE", name: "Yemen" }, { code: "ZM", name: "Zambia" },
+  { code: "ZW", name: "Zimbabwe" },
 ];
 
 function GeoRestrictTab() {
@@ -5581,6 +5867,246 @@ function DomainsTab() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// FEATURE REQUESTS TAB (Admin)
+// ═══════════════════════════════════════════════════════════════
+
+const FR_STATUS: Record<string, { label: string; color: string }> = {
+  pending:  { label: "Pending",    color: "bg-amber-500/20 text-amber-300" },
+  planned:  { label: "Planned",    color: "bg-indigo-500/20 text-indigo-300" },
+  building: { label: "Building",   color: "bg-violet-500/20 text-violet-300" },
+  done:     { label: "Done ✓",     color: "bg-emerald-500/20 text-emerald-300" },
+  declined: { label: "Declined",   color: "bg-red-500/20 text-red-400" },
+};
+
+function FeatureRequestsAdminTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [noteId, setNoteId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/feature-requests"],
+    queryFn: () => authFetch("/api/admin/feature-requests"),
+    refetchInterval: 60000,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, status, adminNote }: { id: string; status?: string; adminNote?: string }) =>
+      authFetch(`/api/admin/feature-requests/${id}`, { method: "PATCH", body: JSON.stringify({ status, adminNote }) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/feature-requests"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => authFetch(`/api/admin/feature-requests/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast({ title: "Request deleted" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/feature-requests"] });
+    },
+  });
+
+  const all = data?.requests ?? [];
+  const requests = filterStatus === "all" ? all : all.filter((r: any) => r.status === filterStatus);
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-white">Feature Requests</h2>
+          <p className="text-white/40 text-sm mt-0.5">Ideas and requests submitted by your customers</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {["all", "pending", "planned", "building", "done", "declined"].map(s => (
+            <button key={s} onClick={() => setFilterStatus(s)}
+              className={`text-[11px] px-3 py-1.5 rounded-lg capitalize font-medium transition-colors ${filterStatus === s ? "bg-white/12 text-white" : "text-white/35 hover:text-white/60"}`}>
+              {s === "all" ? `All (${all.length})` : s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 text-indigo-400 animate-spin" /></div>
+      ) : requests.length === 0 ? (
+        <div className="text-center py-16 rounded-2xl border border-white/8" style={{ background: "rgba(255,255,255,.03)" }}>
+          <Sparkles className="w-10 h-10 mx-auto mb-3 text-white/10" />
+          <p className="text-white/30">No feature requests {filterStatus !== "all" ? `with status "${filterStatus}"` : "yet"}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {requests.map((r: any) => {
+            const st = FR_STATUS[r.status] || FR_STATUS.pending;
+            return (
+              <div key={r.id} className="rounded-xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,.03)" }}>
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${st.color}`}>{st.label}</span>
+                      <span className="text-[11px] text-white/35 flex items-center gap-1">
+                        <span className="text-amber-400">▲</span> {r.votes || 1} vote{r.votes !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <p className="text-white font-semibold text-sm mb-0.5">{r.title}</p>
+                    {r.description && <p className="text-white/50 text-xs leading-relaxed">{r.description}</p>}
+                    <p className="text-white/25 text-[11px] mt-2">
+                      by <span className="text-white/40">{r.customerName || r.customerEmail}</span>
+                      {r.createdAt && <span> · {new Date(r.createdAt).toLocaleDateString()}</span>}
+                    </p>
+                    {r.adminNote && (
+                      <p className="mt-2 text-xs text-indigo-300/80 border-l-2 border-indigo-500/40 pl-2">Admin: {r.adminNote}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <select
+                      value={r.status}
+                      onChange={e => updateMutation.mutate({ id: r.id, status: e.target.value })}
+                      className="text-[11px] bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none"
+                    >
+                      {Object.keys(FR_STATUS).map(s => <option key={s} value={s}>{FR_STATUS[s].label}</option>)}
+                    </select>
+                    <button onClick={() => { setNoteId(r.id); setNoteText(r.adminNote || ""); }}
+                      className="text-[11px] px-2.5 py-1 rounded-lg bg-indigo-500/15 text-indigo-300 hover:bg-indigo-500/25 transition-colors">
+                      Note
+                    </button>
+                    <button onClick={() => deleteMutation.mutate(r.id)}
+                      className="p-1.5 rounded-lg text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inline note editor */}
+                {noteId === r.id && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      value={noteText}
+                      onChange={e => setNoteText(e.target.value)}
+                      placeholder="Add admin note (visible to customer)…"
+                      className="flex-1 text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white placeholder:text-white/25 focus:outline-none focus:border-indigo-500/50"
+                    />
+                    <button onClick={() => { updateMutation.mutate({ id: r.id, adminNote: noteText }); setNoteId(null); toast({ title: "Note saved" }); }}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors">Save</button>
+                    <button onClick={() => setNoteId(null)} className="text-white/30 hover:text-white/60"><X className="w-4 h-4" /></button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RATINGS TAB
+// ═══════════════════════════════════════════════════════════════
+
+function RatingsTab() {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/ratings"],
+    queryFn: () => authFetch("/api/admin/ratings"),
+    refetchInterval: 60000,
+  });
+  const ratings = data?.ratings ?? [];
+  const avg = data?.average ?? 0;
+  const count = data?.count ?? 0;
+
+  const starDist = [5,4,3,2,1].map(n => ({
+    stars: n,
+    count: ratings.filter((r: any) => r.stars === n).length,
+  }));
+
+  function StarDisplay({ stars, size = "w-4 h-4" }: { stars: number; size?: string }) {
+    return (
+      <div className="flex items-center gap-0.5">
+        {[1,2,3,4,5].map(s => (
+          <Star key={s} className={`${size} ${s <= stars ? "text-amber-400 fill-amber-400" : "text-white/15"}`} />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-white">Customer Ratings</h2>
+        <p className="text-white/40 text-sm mt-0.5">Reviews submitted by customers after completed orders</p>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl p-4 border border-white/10" style={{ background: "rgba(255,255,255,.04)" }}>
+          <p className="text-white/50 text-xs mb-1">Average Rating</p>
+          <p className="text-3xl font-bold text-amber-400">{avg > 0 ? avg.toFixed(1) : "—"}</p>
+          <div className="mt-1"><StarDisplay stars={Math.round(avg)} /></div>
+        </div>
+        <div className="rounded-xl p-4 border border-white/10" style={{ background: "rgba(255,255,255,.04)" }}>
+          <p className="text-white/50 text-xs mb-1">Total Reviews</p>
+          <p className="text-3xl font-bold text-white">{count}</p>
+        </div>
+        <div className="rounded-xl p-4 border border-white/10 space-y-1" style={{ background: "rgba(255,255,255,.04)" }}>
+          <p className="text-white/50 text-xs mb-2">Distribution</p>
+          {starDist.map(({ stars, count: c }) => (
+            <div key={stars} className="flex items-center gap-2 text-xs">
+              <span className="text-white/50 w-4 text-right">{stars}</span>
+              <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+              <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full rounded-full bg-amber-400" style={{ width: count > 0 ? `${(c / count) * 100}%` : "0%" }} />
+              </div>
+              <span className="text-white/40 w-5 text-right">{c}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-xl border border-white/10 overflow-hidden" style={{ background: "rgba(255,255,255,.03)" }}>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 text-indigo-400 animate-spin" /></div>
+        ) : ratings.length === 0 ? (
+          <div className="text-center py-16 text-white/30">
+            <Star className="w-10 h-10 mx-auto mb-3 text-white/10" />
+            <p>No ratings yet</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-white/8">
+                <th className="text-left px-4 py-3 text-white/40 font-medium">Customer</th>
+                <th className="text-left px-4 py-3 text-white/40 font-medium">Plan</th>
+                <th className="text-left px-4 py-3 text-white/40 font-medium">Stars</th>
+                <th className="text-left px-4 py-3 text-white/40 font-medium">Comment</th>
+                <th className="text-left px-4 py-3 text-white/40 font-medium">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ratings.map((r: any) => (
+                <tr key={r.id} className="border-b border-white/5 hover:bg-white/2 transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="text-white/80 font-medium">{r.customerName || r.customerEmail?.split("@")[0]}</p>
+                    <p className="text-white/30 text-xs font-mono">{r.customerEmail}</p>
+                  </td>
+                  <td className="px-4 py-3 text-white/60 text-xs">{r.planName || "—"}</td>
+                  <td className="px-4 py-3"><StarDisplay stars={r.stars} size="w-3.5 h-3.5" /></td>
+                  <td className="px-4 py-3 text-white/50 text-xs max-w-[220px]">
+                    <p className="line-clamp-2">{r.comment || <span className="text-white/20 italic">No comment</span>}</p>
+                  </td>
+                  <td className="px-4 py-3 text-white/30 text-xs whitespace-nowrap">
+                    {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CampaignsTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -5717,6 +6243,360 @@ function CampaignsTab() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONVERSION FUNNEL TAB
+// ═══════════════════════════════════════════════════════════════
+function ConversionFunnelTab() {
+  const { toast } = useToast();
+  const [days, setDays] = useState(30);
+  const authFetch = (url: string, opts: any = {}) => fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${localStorage.getItem("admin_token")}`, "Content-Type": "application/json" } });
+
+  const { data, isLoading, refetch } = useQuery<any>({
+    queryKey: ["/api/admin/funnel", days],
+    queryFn: () => authFetch(`/api/admin/funnel?days=${days}`).then(r => r.json()),
+  });
+
+  const funnel: any[] = data?.funnel ?? [];
+  const maxCount = Math.max(...funnel.map((f: any) => f.count), 1);
+
+  const STEP_META: Record<string, { label: string; color: string }> = {
+    page_view:         { label: "Store Visits",        color: "from-blue-600 to-blue-500" },
+    plan_view:         { label: "Plan Interactions",   color: "from-indigo-600 to-indigo-500" },
+    checkout_start:    { label: "Checkout Started",    color: "from-violet-600 to-violet-500" },
+    checkout_complete: { label: "Paid Orders",         color: "from-emerald-600 to-emerald-500" },
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-white">Conversion Funnel</h2>
+          <p className="text-xs text-white/40 mt-0.5">Track how visitors move from browsing to paying</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {[7, 30, 90].map(d => (
+            <button key={d} onClick={() => setDays(d)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors border ${days === d ? "bg-indigo-600 border-indigo-500 text-white" : "bg-white/5 border-white/10 text-white/50 hover:text-white"}`}>
+              {d}d
+            </button>
+          ))}
+          <button onClick={() => refetch()} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 hover:text-white transition-colors">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: "linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08))", border: "1px solid rgba(99,102,241,.2)" }}>
+        <div className="w-12 h-12 rounded-xl bg-indigo-600/20 flex items-center justify-center shrink-0">
+          <TrendingUp className="w-6 h-6 text-indigo-400" />
+        </div>
+        <div>
+          <p className="text-white/50 text-xs">Overall conversion rate (visits → paid)</p>
+          <p className="text-3xl font-bold text-white mt-0.5">{data?.conversionRate ?? 0}%</p>
+        </div>
+        <div className="ml-auto text-right">
+          <p className="text-white/30 text-xs">Period</p>
+          <p className="text-white font-semibold text-sm">Last {days} days</p>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-indigo-400 animate-spin" /></div>
+      ) : (
+        <div className="space-y-3">
+          {funnel.map((step: any, i: number) => {
+            const meta = STEP_META[step.step] || { label: step.step, color: "from-gray-600 to-gray-500" };
+            const widthPct = maxCount > 0 ? Math.max((step.count / maxCount) * 100, 4) : 4;
+            const dropoff = i > 0 && funnel[i - 1].count > 0
+              ? Math.round(((funnel[i - 1].count - step.count) / funnel[i - 1].count) * 100) : null;
+            return (
+              <div key={step.step}>
+                {dropoff !== null && (
+                  <div className="flex items-center gap-2 py-1 px-2">
+                    <div className="w-px h-4 bg-white/10 mx-4" />
+                    <span className="text-[11px] text-red-400/70">▼ {dropoff}% dropped off</span>
+                  </div>
+                )}
+                <div className="rounded-xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,.03)" }}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-baseline justify-between">
+                        <p className="text-sm font-semibold text-white">{meta.label}</p>
+                        <p className="text-xl font-bold text-white">{step.count.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                    <div className={`h-full rounded-full bg-gradient-to-r ${meta.color} transition-all duration-700`}
+                      style={{ width: `${widthPct}%` }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,.03)" }}>
+          <p className="text-sm font-semibold text-white mb-3">🔥 Most Viewed Plans</p>
+          {(data?.topPlans ?? []).length === 0 ? (
+            <p className="text-white/25 text-xs">No plan views recorded yet</p>
+          ) : (
+            <div className="space-y-2">
+              {(data.topPlans as any[]).map((p: any, i: number) => (
+                <div key={i} className="flex items-center justify-between">
+                  <p className="text-xs text-white/70 truncate max-w-[180px]">{p.plan_name}</p>
+                  <span className="text-xs font-bold text-indigo-400 ml-2">{p.cnt}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="rounded-xl border border-white/8 p-4" style={{ background: "rgba(255,255,255,.03)" }}>
+          <p className="text-sm font-semibold text-white mb-3">⚡ Live Activity</p>
+          {(data?.recentEvents ?? []).length === 0 ? (
+            <p className="text-white/25 text-xs">No events recorded yet</p>
+          ) : (
+            <div className="space-y-1.5 max-h-52 overflow-y-auto">
+              {(data.recentEvents as any[]).map((e: any, i: number) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                    e.event_type === "page_view" ? "bg-blue-500/20 text-blue-400" :
+                    e.event_type === "plan_view" ? "bg-indigo-500/20 text-indigo-400" :
+                    e.event_type === "checkout_start" ? "bg-violet-500/20 text-violet-400" :
+                    "bg-emerald-500/20 text-emerald-400"
+                  }`}>{e.event_type.replace("_"," ")}</span>
+                  {e.plan_name && <span className="text-[10px] text-white/50 truncate">{e.plan_name}</span>}
+                  <span className="text-[10px] text-white/20 ml-auto">{e.created_at?.slice(11,16)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CUSTOMER GROUPS TAB
+// ═══════════════════════════════════════════════════════════════
+function CustomerGroupsTab() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const authFetch = (url: string, opts: any = {}) => fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${localStorage.getItem("admin_token")}`, "Content-Type": "application/json" } });
+
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/customer-groups"],
+    queryFn: () => authFetch("/api/admin/customer-groups").then(r => r.json()),
+  });
+
+  const groups: any[] = data?.groups ?? [];
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [name, setName] = useState("");
+  const [color, setColor] = useState("#6366f1");
+  const [discountPct, setDiscountPct] = useState(0);
+  const [isBanned, setIsBanned] = useState(false);
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
+  const [members, setMembers] = useState<any[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [assignEmail, setAssignEmail] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+
+  const GROUP_COLORS = ["#6366f1","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#3b82f6","#14b8a6","#f97316","#64748b"];
+
+  function openCreate() { setEditing(null); setName(""); setColor("#6366f1"); setDiscountPct(0); setIsBanned(false); setDescription(""); setShowForm(true); }
+  function openEdit(g: any) { setEditing(g); setName(g.name); setColor(g.color||"#6366f1"); setDiscountPct(g.discount_percent||0); setIsBanned(!!g.is_banned); setDescription(g.description||""); setShowForm(true); }
+
+  async function saveGroup() {
+    if (!name.trim()) { toast({ title: "Name required", variant: "destructive" }); return; }
+    setSaving(true);
+    try {
+      const body = JSON.stringify({ name, color, discount_percent: discountPct, is_banned: isBanned, description });
+      const url = editing ? `/api/admin/customer-groups/${editing.id}` : "/api/admin/customer-groups";
+      const d = await authFetch(url, { method: editing ? "PUT" : "POST", body }).then(r => r.json());
+      if (d.success) { toast({ title: editing ? "Group updated" : "Group created ✅" }); qc.invalidateQueries({ queryKey: ["/api/admin/customer-groups"] }); setShowForm(false); }
+      else toast({ title: d.error || "Failed", variant: "destructive" });
+    } catch { toast({ title: "Failed", variant: "destructive" }); }
+    setSaving(false);
+  }
+
+  async function deleteGroup(id: number) {
+    if (!confirm("Delete this group? Members will be unassigned.")) return;
+    await authFetch(`/api/admin/customer-groups/${id}`, { method: "DELETE" });
+    qc.invalidateQueries({ queryKey: ["/api/admin/customer-groups"] });
+    toast({ title: "Group deleted" });
+    if (selectedGroup?.id === id) setSelectedGroup(null);
+  }
+
+  async function loadMembers(g: any) {
+    setSelectedGroup(g); setMembersLoading(true); setMembers([]);
+    const d = await authFetch(`/api/admin/customer-groups/${g.id}/members`).then(r => r.json());
+    setMembers(d.members || []); setMembersLoading(false);
+  }
+
+  async function assignCustomer() {
+    if (!assignEmail.trim() || !selectedGroup) return;
+    setAssignLoading(true);
+    try {
+      const custsR = await authFetch("/api/admin/customers").then(r => r.json());
+      const cust = (custsR.customers || []).find((c: any) => c.email.toLowerCase() === assignEmail.trim().toLowerCase());
+      if (!cust) { toast({ title: "Customer not found", variant: "destructive" }); setAssignLoading(false); return; }
+      const d = await authFetch(`/api/admin/customers/${cust.id}/group`, { method: "PATCH", body: JSON.stringify({ group_id: selectedGroup.id }) }).then(r => r.json());
+      if (d.success) { toast({ title: `${cust.email} assigned to ${selectedGroup.name}` }); setAssignEmail(""); loadMembers(selectedGroup); qc.invalidateQueries({ queryKey: ["/api/admin/customer-groups"] }); }
+      else toast({ title: d.error || "Failed", variant: "destructive" });
+    } catch { toast({ title: "Failed", variant: "destructive" }); }
+    setAssignLoading(false);
+  }
+
+  async function removeFromGroup(custId: number) {
+    await authFetch(`/api/admin/customers/${custId}/group`, { method: "PATCH", body: JSON.stringify({ group_id: null }) });
+    loadMembers(selectedGroup); qc.invalidateQueries({ queryKey: ["/api/admin/customer-groups"] });
+    toast({ title: "Removed from group" });
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-lg font-bold text-white">Customer Groups</h2>
+          <p className="text-xs text-white/40 mt-0.5">Tag customers as VIP, Reseller, Banned etc. and apply group discounts</p>
+        </div>
+        <Button onClick={openCreate} className="bg-gradient-to-r from-indigo-600 to-violet-600 border-0 text-white font-bold hover:opacity-90 gap-2 h-9">
+          <Plus className="w-4 h-4" /> New Group
+        </Button>
+      </div>
+
+      {showForm && (
+        <div className="rounded-2xl border border-indigo-500/25 p-5 space-y-4" style={{ background: "rgba(99,102,241,.07)" }}>
+          <p className="text-sm font-semibold text-indigo-300">{editing ? "Edit Group" : "Create New Group"}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">Group Name *</label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. VIP Customers"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-indigo-500/60" />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">Discount % (0 = none)</label>
+              <input type="number" min="0" max="100" value={discountPct} onChange={e => setDiscountPct(parseInt(e.target.value)||0)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/60" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Group Color</label>
+            <div className="flex gap-2 flex-wrap">
+              {GROUP_COLORS.map(c => (
+                <button key={c} onClick={() => setColor(c)}
+                  className={`w-7 h-7 rounded-full border-2 transition-all ${color===c?"border-white scale-110":"border-transparent hover:scale-105"}`}
+                  style={{ background: c }} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 mb-1 block">Description (optional)</label>
+            <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Internal note about this group"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-indigo-500/60" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch checked={isBanned} onCheckedChange={setIsBanned} />
+            <span className="text-sm text-white/70">Banned group — suspend all members automatically</span>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={saveGroup} disabled={saving} className="bg-indigo-600 hover:bg-indigo-500 border-0 text-white font-bold gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {saving ? "Saving…" : editing ? "Save Changes" : "Create Group"}
+            </Button>
+            <Button variant="ghost" onClick={() => setShowForm(false)} className="text-white/50 hover:text-white">Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-indigo-400 animate-spin" /></div>
+      ) : groups.length === 0 ? (
+        <div className="text-center py-14 rounded-xl border border-white/8" style={{ background: "rgba(255,255,255,.02)" }}>
+          <Users className="w-8 h-8 text-white/10 mx-auto mb-2" />
+          <p className="text-white/30 text-sm">No groups yet — create your first one</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {groups.map((g: any) => (
+            <div key={g.id}
+              className={`rounded-xl border p-4 cursor-pointer transition-all ${selectedGroup?.id===g.id?"border-indigo-500/50 bg-indigo-600/10":"border-white/8 hover:border-white/15"}`}
+              style={selectedGroup?.id!==g.id?{background:"rgba(255,255,255,.03)"}:{}}
+              onClick={() => loadMembers(g)}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: (g.color||"#6366f1")+"22" }}>
+                  <div className="w-4 h-4 rounded-full" style={{ background: g.color||"#6366f1" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white truncate">{g.name}</p>
+                  {g.is_banned ? <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">Banned</span>
+                    : g.discount_percent>0 ? <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">{g.discount_percent}% off</span> : null}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-white/40">{g.member_count||0} member{g.member_count!==1?"s":""}</span>
+                <div className="flex gap-1">
+                  <button onClick={e => { e.stopPropagation(); openEdit(g); }} className="p-1 rounded hover:bg-white/10 text-white/30 hover:text-white transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+                  <button onClick={e => { e.stopPropagation(); deleteGroup(g.id); }} className="p-1 rounded hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedGroup && (
+        <div className="rounded-2xl border border-white/10 p-5 space-y-4" style={{ background: "rgba(255,255,255,.03)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full" style={{ background: selectedGroup.color||"#6366f1" }} />
+            <h3 className="text-sm font-bold text-white">{selectedGroup.name} — Members</h3>
+            <span className="ml-auto text-xs text-white/30">{members.length} member{members.length!==1?"s":""}</span>
+          </div>
+          <div className="flex gap-2">
+            <input value={assignEmail} onChange={e => setAssignEmail(e.target.value)} placeholder="customer@email.com"
+              onKeyDown={e => e.key==="Enter" && assignCustomer()}
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-indigo-500/60" />
+            <Button onClick={assignCustomer} disabled={assignLoading||!assignEmail.trim()}
+              className="bg-indigo-600 hover:bg-indigo-500 border-0 text-white font-bold gap-1.5 shrink-0">
+              {assignLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+              Assign
+            </Button>
+          </div>
+          {membersLoading ? (
+            <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 text-indigo-400 animate-spin" /></div>
+          ) : members.length===0 ? (
+            <p className="text-white/25 text-sm text-center py-4">No members yet — assign a customer above</p>
+          ) : (
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {members.map((m: any) => (
+                <div key={m.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-white/5" style={{ background: "rgba(255,255,255,.03)" }}>
+                  <div className="w-7 h-7 rounded-full bg-indigo-600/30 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-indigo-400">{(m.name||m.email)[0].toUpperCase()}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-white truncate">{m.name||"—"}</p>
+                    <p className="text-[11px] text-white/40 truncate">{m.email}</p>
+                  </div>
+                  {m.suspended?<span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 rounded">Suspended</span>:null}
+                  <button onClick={() => removeFromGroup(m.id)} className="p-1 rounded hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors shrink-0">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
