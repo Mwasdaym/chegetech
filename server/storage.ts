@@ -184,11 +184,45 @@ export async function initializeDatabase() {
           user_agent TEXT,
           created_at TEXT DEFAULT (NOW()::text)
         );
+
+        CREATE TABLE IF NOT EXISTS ratings (
+          id SERIAL PRIMARY KEY,
+          reference TEXT UNIQUE NOT NULL,
+          customer_email TEXT NOT NULL,
+          customer_name TEXT,
+          plan_id TEXT,
+          plan_name TEXT,
+          stars INTEGER NOT NULL CHECK (stars BETWEEN 1 AND 5),
+          comment TEXT,
+          created_at TEXT DEFAULT (NOW()::text)
+        );
+
+        CREATE TABLE IF NOT EXISTS funnel_events (
+          id SERIAL PRIMARY KEY,
+          event_type TEXT NOT NULL,
+          session_id TEXT,
+          plan_id TEXT,
+          plan_name TEXT,
+          customer_email TEXT,
+          ip TEXT,
+          created_at TEXT DEFAULT (NOW()::text)
+        );
+
+        CREATE TABLE IF NOT EXISTS customer_groups (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          color TEXT DEFAULT '#6366f1',
+          discount_percent INTEGER DEFAULT 0,
+          is_banned BOOLEAN DEFAULT false,
+          description TEXT,
+          created_at TEXT DEFAULT (NOW()::text)
+        );
       `);
 
       // Migrate: add avatar_url column if missing (safe for existing PG DBs)
       await pgPool.query("ALTER TABLE customers ADD COLUMN IF NOT EXISTS avatar_url TEXT");
       await pgPool.query("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS expires_at TEXT");
+      await pgPool.query("ALTER TABLE customers ADD COLUMN IF NOT EXISTS group_id INTEGER");
 
       const drizzlePgModule = await import("drizzle-orm/node-postgres");
       const drizzlePg = drizzlePgModule.drizzle;
@@ -363,11 +397,46 @@ function initSqlite() {
       user_agent TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS ratings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reference TEXT UNIQUE NOT NULL,
+      customer_email TEXT NOT NULL,
+      customer_name TEXT,
+      plan_id TEXT,
+      plan_name TEXT,
+      stars INTEGER NOT NULL,
+      comment TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS funnel_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_type TEXT NOT NULL,
+      session_id TEXT,
+      plan_id TEXT,
+      plan_name TEXT,
+      customer_email TEXT,
+      ip TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS customer_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      color TEXT DEFAULT '#6366f1',
+      discount_percent INTEGER DEFAULT 0,
+      is_banned INTEGER DEFAULT 0,
+      description TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
   // Migrate: add avatar_url column if missing (safe for existing DBs)
   try { sqliteInstance!.prepare("ALTER TABLE customers ADD COLUMN avatar_url TEXT").run(); } catch {}
   // Migrate: add expires_at to transactions
   try { sqliteInstance!.prepare("ALTER TABLE transactions ADD COLUMN expires_at TEXT").run(); } catch {}
+  // Migrate: add group_id to customers
+  try { sqliteInstance!.prepare("ALTER TABLE customers ADD COLUMN group_id INTEGER").run(); } catch {}
   console.log("[db] Connected to SQLite");
 }
 
@@ -1137,6 +1206,42 @@ export class DbStorage implements IStorage {
     const customer = await this.getCustomerByEmail(email);
     if (!customer) return [];
     return this.getLoginLogs(customer.id);
+  }
+
+  async createRating(data: { reference: string; customerEmail: string; customerName?: string; planId?: string; planName?: string; stars: number; comment?: string }): Promise<void> {
+    if (dbType === "pg" && pgPool) {
+      await pgPool.query(
+        "INSERT INTO ratings (reference, customer_email, customer_name, plan_id, plan_name, stars, comment) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (reference) DO UPDATE SET stars=$6, comment=$7",
+        [data.reference, data.customerEmail, data.customerName || null, data.planId || null, data.planName || null, data.stars, data.comment || null]
+      );
+    } else {
+      sqliteInstance!.prepare(
+        "INSERT INTO ratings (reference, customer_email, customer_name, plan_id, plan_name, stars, comment) VALUES (?,?,?,?,?,?,?) ON CONFLICT(reference) DO UPDATE SET stars=excluded.stars, comment=excluded.comment"
+      ).run(data.reference, data.customerEmail, data.customerName || null, data.planId || null, data.planName || null, data.stars, data.comment || null);
+    }
+  }
+
+  async getRatingByReference(reference: string): Promise<any | null> {
+    if (dbType === "pg" && pgPool) {
+      const r = await pgPool.query("SELECT * FROM ratings WHERE reference = $1", [reference]);
+      return r.rows[0] || null;
+    }
+    return (sqliteInstance!.prepare("SELECT * FROM ratings WHERE reference = ?").get(reference) as any) || null;
+  }
+
+  async getAllRatings(limit = 100): Promise<any[]> {
+    if (dbType === "pg" && pgPool) {
+      const r = await pgPool.query("SELECT * FROM ratings ORDER BY created_at DESC LIMIT $1", [limit]);
+      return r.rows.map((row: any) => ({
+        id: row.id, reference: row.reference, customerEmail: row.customer_email, customerName: row.customer_name,
+        planId: row.plan_id, planName: row.plan_name, stars: row.stars, comment: row.comment, createdAt: row.created_at,
+      }));
+    }
+    const rows = sqliteInstance!.prepare("SELECT * FROM ratings ORDER BY created_at DESC LIMIT ?").all(limit) as any[];
+    return rows.map((row) => ({
+      id: row.id, reference: row.reference, customerEmail: row.customer_email, customerName: row.customer_name,
+      planId: row.plan_id, planName: row.plan_name, stars: row.stars, comment: row.comment, createdAt: row.created_at,
+    }));
   }
 
   async getCustomerSpendingStats(email: string): Promise<{ totalSpent: number; totalOrders: number; topPlan: string | null }> {
